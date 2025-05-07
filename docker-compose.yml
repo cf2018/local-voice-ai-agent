@@ -1,0 +1,29 @@
+services:
+  voice-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voice-agent
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ollama-data:/root/.ollama  # Persist Ollama models
+    ports:
+      - "8080:8080"  # Exposing the web UI port
+      - "7860:7860"  # Exposing Gradio UI port
+      - "11434:11434"  # Exposing Ollama API port (optional, for external access)
+    environment:
+      - OLLAMA_HOST=localhost:11434  # Point to the container's internal Ollama instance
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+      - PYTHONUNBUFFERED=1
+      - MODEL=granite3-dense:latest 
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Ensures host.docker.internal resolves to the host's IP
+    devices:
+      - /dev/snd:/dev/snd  # Give access to sound devices for microphone input
+
+# Add a named volume to persist Ollama models between container restarts
+volumes:
+  ollama-data:

@@ -1,6 +1,6 @@
 # Local Voice AI Agent
 
-A real-time voice chat application powered by local AI models. This project allows you to have voice conversations with AI models like Gemma running locally on your machine.
+A real-time voice chat application powered by local AI models. This project allows you to have voice conversations with AI models like Granite running locally on your machine.
 
 ## Features
 
@@ -9,67 +9,121 @@ A real-time voice chat application powered by local AI models. This project allo
 - Text-to-speech response generation
 - Web interface for interaction
 - Phone number interface option
+- English language support
+- Configurable AI model (granite3-dense:latest default)
+
+## Note on Ollama
+- Ollama runs within the container itself, is all contained
+- If you have it already running on linux, stop it with systemctl stop ollama, otherwise a port conflict will arise
 
 ## Prerequisites
 
-- MacOS
-- [Ollama](https://ollama.ai/) - Run LLMs locally
-- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
+- Docker and Docker Compose
+- Microphone access for voice input
 
 ## Installation
 
-### 1. Install prerequisites with Homebrew
+### Using Docker (Recommended)
+
+1. Clone the repository
 
 ```bash
-brew install ollama
-brew install uv
-```
-
-### 2. Clone the repository
-
-```bash
-git clone https://github.com/jesuscopado/local-voice-ai-agent.git
+git clone https://github.com/cf2018/local-voice-ai-agent.git
 cd local-voice-ai-agent
 ```
 
-### 3. Set up Python environment and install dependencies
+2. Build and run with Docker Compose
 
 ```bash
-uv venv
-source .venv/bin/activate
-uv sync
+docker compose up
 ```
 
-### 4. Download required models in Ollama
-
-```bash
-ollama pull gemma3:1b
-# For advanced version
-ollama pull gemma3:4b
-```
+This will:
+- Build the Docker image with all required dependencies
+- Start Ollama service inside the container
+- Download the default AI model (granite3-dense:latest)
+- Run the voice agent application with default settings (English language)
 
 ## Usage
 
-### Basic Voice Chat
+### Starting with Default Settings
+
+Simply run:
 
 ```bash
-python local_voice_chat.py
+docker compose up
 ```
 
-### Advanced Voice Chat (with system prompt)
+### Using Different Models
 
-#### Web UI (default)
+You can use different Ollama models by modifying the environment variables:
+
+```yaml
+services:
+  voice-agent:
+    # ...other settings...
+    environment:
+      # ...other environment variables...
+      - MODEL=llama3:8b  # Change to your preferred model
+```
+
+Or use command-line override:
+
 ```bash
-python local_voice_chat_advanced.py
+docker compose run --rm -e MODEL=llama3:8b voice-agent
 ```
 
-#### Phone Number Interface
+## Model Examples
+
+The application works with various Ollama models. Here are some examples:
+
+| Model | Size | Description | Example Command |
+|-------|------|-------------|----------------|
+| granite3-dense:latest | - | Default model | `docker compose run --rm -e MODEL=granite3-dense:latest voice-agent` |
+| gemma3:1b | 1B | Lightweight model | `docker compose run --rm -e MODEL=gemma3:1b voice-agent` |
+| gemma3:4b | 4B | Better quality responses | `docker compose run --rm -e MODEL=gemma3:4b voice-agent` |
+| llama3:8b | 8B | More capable general model | `docker compose run --rm -e MODEL=llama3:8b voice-agent` |
+| mistral:7b | 7B | Good all-around performer | `docker compose run --rm -e MODEL=mistral:7b voice-agent` |
+| qwen2:7b | 7B | Multilingual capabilities | `docker compose run --rm -e MODEL=qwen2:7b voice-agent` |
+
+## Advanced Usage
+
+### Running in Advanced Mode
+
+Advanced mode uses a system prompt and the more capable gemma3:4b model:
+
+```bash
+docker compose run --rm -e ADVANCED=true voice-agent
+```
+
+### Combining Options
+
+You can combine different options:
+
+```bash
+# Advanced mode with custom model
+docker compose run --rm -e ADVANCED=true -e MODEL=llama3:8b voice-agent
+```
+
+### Phone Number Interface
 Get a temporary phone number that anyone can call to interact with your AI:
+
 ```bash
-python local_voice_chat_advanced.py --phone
+docker compose run --rm -e ADVANCED=true -e PHONE=true voice-agent
 ```
 
 This will provide you with a temporary phone number that you can call to interact with the AI using your voice.
+
+## Persistent Models
+
+The Docker setup uses a named volume (`ollama-data`) to persist downloaded models between container restarts. This means you only need to download models once.
+
+## Logs
+
+Logs are stored in the `logs` directory, which is mounted as a volume in the Docker container. You can view them at:
+
+- General application log: `logs/voice_agent.log`
+- Startup log: `logs/startup.log`
 
 ## How it works
 
@@ -77,7 +131,7 @@ The application uses:
 - `FastRTC` for WebRTC communication
 - `Moonshine` for local speech-to-text conversion
 - `Kokoro` for text-to-speech synthesis
-- `Ollama` for running local LLM inference with `Gemma` models
+- `Ollama` for running local LLM inference with various models
 
 When you speak, your audio is:
 1. Transcribed to text using Moonshine

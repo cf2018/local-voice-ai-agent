@@ -23,8 +23,8 @@ ollama_host = os.environ.get("OLLAMA_HOST", "localhost:11434")
 os.environ["OLLAMA_HOST"] = ollama_host
 logger.info(f"Using Ollama host: {ollama_host}")
 
-# Get model from environment variable (set by start.sh), default to granite3-dense:latest
-ollama_model = os.environ.get("OLLAMA_MODEL", "granite3-dense:latest")
+# Get model from environment variable (set by start.sh), default to gemma3:1b
+ollama_model = os.environ.get("OLLAMA_MODEL", "gemma3:1b")
 logger.info(f"Using Ollama model: {ollama_model}")
 
 # Add our custom-formatted console logger with more visible formatting
@@ -102,22 +102,19 @@ except Exception as e:
         f.write(f"ERROR LOADING MODELS: {e}\n")
 
 # Function to generate TTS with timeout
-def generate_tts_with_timeout(text, timeout=120):  # Increased timeout from 60 to 120 seconds
+def generate_tts_with_timeout(text, timeout=60):
     """Generate TTS with a timeout to prevent hanging"""
     chunks = []
     chunk_event = threading.Event()
     tts_error = None
-    chunks_yielded = 0
-    generation_complete = False
     
     def tts_worker():
-        nonlocal chunks, tts_error, generation_complete
+        nonlocal chunks, tts_error
         try:
             # Collect chunks from the generator
             for chunk in tts_model.stream_tts_sync(text):
                 chunks.append(chunk)
                 chunk_event.set()  # Signal that we got at least one chunk
-            generation_complete = True
         except Exception as e:
             tts_error = e
             chunk_event.set()  # Signal even if there's an error
@@ -129,7 +126,7 @@ def generate_tts_with_timeout(text, timeout=120):  # Increased timeout from 60 t
     
     # Wait for the first chunk with timeout
     start_time = time.time()
-    first_chunk_timeout = min(timeout, 15)  # Increased from 10 to 15 seconds for first chunk
+    first_chunk_timeout = min(timeout, 10)  # Wait up to 10 seconds for first chunk
     
     if not chunk_event.wait(first_chunk_timeout):
         logger.warning(f"⚠️ No TTS chunks produced after {first_chunk_timeout} seconds")
@@ -137,32 +134,20 @@ def generate_tts_with_timeout(text, timeout=120):  # Increased timeout from 60 t
     # If we got an error, raise it
     if tts_error:
         raise tts_error
-    
-    # Continue yielding chunks as they become available
-    end_time = start_time + timeout
-    
-    while time.time() < end_time:
-        # Yield any new chunks that are available
-        while chunks_yielded < len(chunks):
-            yield chunks[chunks_yielded]
-            chunks_yielded += 1
-            
-        # If thread is done and all chunks yielded, we're done
-        if generation_complete and chunks_yielded >= len(chunks):
-            logger.info(f"✅ TTS generation completed successfully - processed full message")
-            break
-            
-        # Small sleep to prevent CPU spinning
-        time.sleep(0.05)
-    
-    # Final check for any remaining chunks
-    while chunks_yielded < len(chunks):
-        yield chunks[chunks_yielded]
-        chunks_yielded += 1
         
-    # Log warning if timed out
-    if not generation_complete:
-        logger.warning(f"⚠️ TTS generation did not complete within {timeout} seconds - message may be truncated")
+    # Return chunks and continue in background
+    for chunk in chunks:
+        yield chunk
+    
+    remaining_time = max(0, timeout - (time.time() - start_time))
+    thread.join(remaining_time)  # Give the thread some time to finish
+    
+    # After timeout, just return any remaining chunks that were generated
+    if thread.is_alive():
+        logger.warning(f"⚠️ TTS generation did not complete within {timeout} seconds")
+    else:
+        for chunk in chunks[len(chunks):]:  # Get any new chunks that weren't yielded yet
+            yield chunk
 
 # Define the echo function with heavy debugging and timeout
 def echo(audio):
@@ -177,7 +162,7 @@ def echo(audio):
         logger.info(f"🎤 Transcribed text: \"{transcript}\"")
         
         # Log LLM request
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%:%S.%f")[:-3]
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         log_event("🔄 PROCESSING WITH LLM", f"Transcript: \"{transcript}\"")
         
         # Get LLM response using the model from environment variable
