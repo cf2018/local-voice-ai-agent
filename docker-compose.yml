@@ -18,7 +18,7 @@ services:
       - GRADIO_SERVER_PORT=7860
       - PYTHONUNBUFFERED=1
       - MODEL=gemma3:1b
-      - LANGUAGE=spanish  # Set Spanish as the default language
+      - LANGUAGE=english  # Set English as the default language
 
     extra_hosts:
       - "host.docker.internal:host-gateway"  # Ensures host.docker.internal resolves to the host's IP

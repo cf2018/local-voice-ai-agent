@@ -222,20 +222,22 @@ try:
             }
             
             # Get the proper language code with fallback to first 2 chars if not in map
-            lang_code = lang_code_map.get(LANGUAGE)
+            lang_code = lang_code_map.get(LANGUAGE, LANGUAGE[:2])
             
             # Attempt to load language-specific STT model if available
-            stt_model = get_stt_model(language=lang_code)
+            # Remove unsupported 'language' parameter
+            stt_model = get_stt_model()
             logger.info(f"✅ {lang['stt_success_message']} ({LANGUAGE}, code: {lang_code})")
         except Exception as lang_error:
             logger.warning(f"Could not load {LANGUAGE}-specific STT model: {lang_error}")
             logger.info("Falling back to default STT model...")
             # Fall back to default model
-            stt_model = get_stt_model()
+            stt_model = get_stt_model(lang_code=lang_code)
             logger.info(f"✅ {lang['stt_success_message']} (default)")
         
         try:
             # Attempt to load language-specific TTS model if available
+            # Remove unsupported 'language' parameter if it causes issues
             tts_model = get_tts_model(language=lang_code)
             logger.info(f"✅ {lang['tts_success_message']} ({LANGUAGE}, code: {lang_code})")
         except Exception as lang_error:
@@ -245,11 +247,11 @@ try:
             tts_model = get_tts_model()
             logger.info(f"✅ {lang['tts_success_message']} (default)")
     else:
-        # Load default English models with proper locale code
-        stt_model = get_stt_model(language="en-us")  # moonshine/base
+        # Load default English models
+        stt_model = get_stt_model()  # moonshine/base
         logger.info(f"✅ {lang['stt_success_message']}")
         
-        tts_model = get_tts_model(language="en-us")  # kokoro
+        tts_model = get_tts_model()  # kokoro
         logger.info(f"✅ {lang['tts_success_message']}")
 except Exception as e:
     logger.exception(f"❌ {lang['error_loading_models']}: {e}")

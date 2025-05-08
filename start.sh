@@ -10,7 +10,7 @@ echo "Starting container setup at $(date)" >> $LOGFILE
 echo "===============================================" >> $LOGFILE
 
 # Parse command-line arguments
-LANGUAGE="${LANGUAGE:-spanish}"  # Default to Spanish, but allow environment variable override
+LANGUAGE="${LANGUAGE:-english}"  # Default to English, but allow environment variable override
 MODEL="gemma3:1b"
 
 # Parse command line arguments
