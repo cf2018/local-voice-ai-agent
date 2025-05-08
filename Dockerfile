@@ -17,8 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Copy application files
-COPY local_voice_chat_english.py .
-COPY local_voice_chat_spanish.py .
+COPY local_voice_chat.py .
 COPY README.md .
 COPY pyproject.toml .
 COPY uv.lock .

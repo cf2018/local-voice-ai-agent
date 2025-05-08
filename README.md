@@ -9,7 +9,7 @@ A real-time voice chat application powered by local AI models. This project allo
 - Text-to-speech response generation
 - Web interface for interaction
 - Phone number interface option
-- English language support
+- Multiple language support (English, Spanish)
 - Configurable AI model (granite3-dense:latest default)
 
 ## Note on Ollama
@@ -54,6 +54,14 @@ Simply run:
 docker compose up
 ```
 
+### Using Different Languages
+
+You can specify a different language:
+
+```bash
+docker compose run --rm -e LANGUAGE=spanish voice-agent
+```
+
 ### Using Different Models
 
 You can use different Ollama models by modifying the environment variables:
@@ -73,6 +81,15 @@ Or use command-line override:
 docker compose run --rm -e MODEL=llama3:8b voice-agent
 ```
 
+### Combining Options
+
+You can combine different options:
+
+```bash
+# Spanish language with custom model
+docker compose run --rm -e LANGUAGE=spanish -e MODEL=llama3:8b voice-agent
+```
+
 ## Model Examples
 
 The application works with various Ollama models. Here are some examples:
@@ -86,30 +103,11 @@ The application works with various Ollama models. Here are some examples:
 | mistral:7b | 7B | Good all-around performer | `docker compose run --rm -e MODEL=mistral:7b voice-agent` |
 | qwen2:7b | 7B | Multilingual capabilities | `docker compose run --rm -e MODEL=qwen2:7b voice-agent` |
 
-## Advanced Usage
-
-### Running in Advanced Mode
-
-Advanced mode uses a system prompt and the more capable gemma3:4b model:
-
-```bash
-docker compose run --rm -e ADVANCED=true voice-agent
-```
-
-### Combining Options
-
-You can combine different options:
-
-```bash
-# Advanced mode with custom model
-docker compose run --rm -e ADVANCED=true -e MODEL=llama3:8b voice-agent
-```
-
 ### Phone Number Interface
 Get a temporary phone number that anyone can call to interact with your AI:
 
 ```bash
-docker compose run --rm -e ADVANCED=true -e PHONE=true voice-agent
+docker compose run --rm -e PHONE=true voice-agent
 ```
 
 This will provide you with a temporary phone number that you can call to interact with the AI using your voice.
@@ -123,6 +121,7 @@ The Docker setup uses a named volume (`ollama-data`) to persist downloaded model
 Logs are stored in the `logs` directory, which is mounted as a volume in the Docker container. You can view them at:
 
 - General application log: `logs/voice_agent.log`
+- Spanish language log: `logs/voice_agent_spanish.log`
 - Startup log: `logs/startup.log`
 
 ## How it works

@@ -10,8 +10,8 @@ echo "Starting container setup at $(date)" >> $LOGFILE
 echo "===============================================" >> $LOGFILE
 
 # Parse command-line arguments
-LANGUAGE="english"
-MODEL="granite3-dense:latest"
+LANGUAGE="${LANGUAGE:-spanish}"  # Default to Spanish, but allow environment variable override
+MODEL="gemma3:1b"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -19,6 +19,10 @@ while [[ $# -gt 0 ]]; do
     --language|-l)
       LANGUAGE="$2"
       shift 2
+      ;;
+    --spanish|-es)
+      LANGUAGE="spanish"
+      shift
       ;;
     --english|-en)
       LANGUAGE="english"
@@ -28,14 +32,10 @@ while [[ $# -gt 0 ]]; do
       MODEL="$2"
       shift 2
       ;;
-    --advanced|-a)
-      ADVANCED=true
-      shift
-      ;;
     *)
       # Unknown option
       echo "Unknown option: $1"
-      echo "Usage: $0 [--language|-l english] [--english|-en] [--model|-m MODEL_NAME] [--advanced|-a]"
+      echo "Usage: $0 [--language|-l spanish|english] [--spanish|-es] [--english|-en] [--model|-m MODEL_NAME]"
       exit 1
       ;;
   esac
@@ -91,16 +91,10 @@ fi
 
 log "Ollama server is up and running"
 
-# Pull the selected model and gemma3:4b if using advanced mode
+# Pull the selected model
 log "Pulling $MODEL model (this may take a while)..."
 
 ollama pull $MODEL
-
-# Also pull gemma3:4b if advanced mode is selected
-if [ "$ADVANCED" = true ]; then
-  log "Pulling gemma3:4b model for advanced mode..."
-  ollama pull gemma3:4b
-fi
 
 # Verify the model was pulled successfully
 counter=0
@@ -124,30 +118,6 @@ if [ "$model_available" = false ]; then
   log "⚠️ Warning: Couldn't verify $MODEL model availability, but will continue anyway"
 fi
 
-# Verify 4b model is available if advanced mode is selected
-if [ "$ADVANCED" = true ]; then
-  counter=0
-  timeout=10
-  model_available=false
-
-  while [ $counter -lt $timeout ]; do
-    if ollama list | grep -q "gemma3:4b"; then
-      log "✅ gemma3:4b model pulled successfully"
-      model_available=true
-      break
-    fi
-    
-    log "Waiting for gemma3:4b model to be fully loaded... ($counter/$timeout)"
-    
-    counter=$((counter+1))
-    sleep 2
-  done
-
-  if [ "$model_available" = false ]; then
-    log "⚠️ Warning: Couldn't verify gemma3:4b model availability, but will continue anyway"
-  fi
-fi
-
 # Set environment variables
 export OLLAMA_HOST=localhost:11434
 export OLLAMA_MODEL=$MODEL
@@ -157,6 +127,13 @@ log "Set OLLAMA_MODEL to $MODEL"
 
 # Create a named pipe for log streaming
 PIPE_PATH="/tmp/voice_agent_pipe"
+
+# Check if the pipe already exists and remove it if it does
+if [ -e "$PIPE_PATH" ]; then
+  log "Removing existing named pipe at $PIPE_PATH"
+  rm -f "$PIPE_PATH"
+fi
+
 mkfifo $PIPE_PATH
 
 log "Created named pipe for log streaming at $PIPE_PATH"
@@ -168,12 +145,7 @@ log "Started log streaming process"
 
 # Start the voice assistant with output redirected to both console and log file
 log "Starting voice assistant application..."
-# Choose between basic or advanced version
-if [ "$ADVANCED" = true ]; then
-  python -u /app/local_voice_chat_advanced.py 2>&1 | tee -a /app/voice_agent.log $PIPE_PATH
-else
-  python -u /app/local_voice_chat.py 2>&1 | tee -a /app/voice_agent.log $PIPE_PATH
-fi
+python -u /app/local_voice_chat.py --language "$LANGUAGE" 2>&1 | tee -a /app/voice_agent.log $PIPE_PATH
 
 # Clean up if the Python script exits
 log "Voice assistant exited, shutting down Ollama..."
