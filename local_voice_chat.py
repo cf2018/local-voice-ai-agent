@@ -226,13 +226,13 @@ try:
             
             # Attempt to load language-specific STT model if available
             # Remove unsupported 'language' parameter
-            stt_model = get_stt_model()
+            stt_model = get_stt_model(language=lang_code)
             logger.info(f"✅ {lang['stt_success_message']} ({LANGUAGE}, code: {lang_code})")
         except Exception as lang_error:
             logger.warning(f"Could not load {LANGUAGE}-specific STT model: {lang_error}")
             logger.info("Falling back to default STT model...")
             # Fall back to default model
-            stt_model = get_stt_model(lang_code=lang_code)
+            stt_model = get_stt_model()
             logger.info(f"✅ {lang['stt_success_message']} (default)")
         
         try:
